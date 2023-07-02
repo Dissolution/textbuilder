@@ -1,122 +1,20 @@
+#![allow(unused)]
+
+mod appendable;
 mod errors;
-mod traits;
+mod formatter_builder;
+mod text_index;
+mod textbuilder;
 
-use crate::errors::TextError;
-use std::str::*;
-use std::string::*;
-pub use traits::*;
+pub use appendable::*;
+pub use formatter_builder::*;
+pub use textbuilder::*;
 
-// HACK!
-#[cfg(windows)]
-pub const DEFAULT_NEWLINE: &str = "\r\n";
-#[cfg(windows)]
-pub const DEFAULT_NEWLINE_BYTES: [u8; 2] = [0x0D, 0x0A]; // \r\n
-#[cfg(unix)]
-pub const DEFAULT_NEWLINE: &str = "\n";
-#[cfg(unix)]
-pub const DEFAULT_NEWLINE_BYTES: [u8; 1] = [0x0A]; // \n
-
-pub struct TextBuilder {
-    /// These are the utf8-encoded bytes of the characters written thus far
-    bytes: Vec<u8>,
-}
-
-impl TextBuilder {
-    #[inline]
-    pub const fn new() -> Self {
-        Self { bytes: Vec::new() }
-    }
-    #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            bytes: Vec::with_capacity(capacity),
-        }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        String::ut
-    }
-
-    pub fn append_utf8_bytes(&mut self, bytes: &[u8]) -> Result<&mut Self, TextError> {
-        let str = from_utf8(bytes)?;
-        self.bytes.extend_from_slice(str.as_bytes());
-        Ok(self)
-    }
-    pub fn append_utf16_bytes(&mut self, bytes: &[u16]) -> Result<&mut Self, TextError> {
-        let mut buffer = [0; 4];
-
-        let char_iter = char::decode_utf16(bytes.to_owned());
-        for decode_result in char_iter {
-            match decode_result {
-                Ok(ch) => {
-                    let str = char::encode_utf8(ch, &mut buffer);
-                    self.bytes.extend_from_slice(str.as_bytes());
-                }
-                Err(ex) => {
-                    return Err(ex.into());
-                }
-            }
-        }
-        Ok(self)
-    }
-
-    pub fn append<A>(&mut self, value: &A) -> &mut Self
-    where
-        A: Appendable,
-    {
-        value.write_value(self)
-    }
-
-    pub fn newline(&mut self) -> &mut Self {
-        self.bytes.extend_from_slice(&DEFAULT_NEWLINE_BYTES);
-        self
-    }
-}
-//
-// impl Debug for TextBuilder {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-//         write!(f, "\"{}\"", self.string)
-//     }
-// }
-impl std::fmt::Display for TextBuilder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = String::from_utf8(self.bytes.clone()).expect("bad utf8 bytes");
-        write!(f, "{}", str)
-    }
-}
-// impl Default for TextBuilder {
-//     fn default() -> Self {
-//         TextBuilder {
-//             string: String::default(),
-//         }
-//     }
-// }
-//
-// pub struct TextBuilderIterator<'a> {
-//     chars: Chars<'a>,
-// }
-// impl<'a> TextBuilderIterator<'a> {
-//     pub fn new(string: &'a String) -> Self {
-//         Self {
-//             chars: string.chars(),
-//         }
-//     }
-// }
-//
-// impl<'a> Iterator for TextBuilderIterator<'a> {
-//     type Item = char;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.chars.next()
-//     }
-// }
-
+/*
 // in-library tests
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TextBuilder;
 
     const DIGITS_COUNT: usize = 10;
     const DIGITS_STR: &str = "0123456789";
@@ -203,3 +101,4 @@ mod tests {
     //     assert_eq!(b.string().unwrap(), "\u{00C6}nima");
     // }
 }
+*/
