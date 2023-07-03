@@ -2,13 +2,17 @@
 
 mod appendable;
 mod errors;
-mod formatter_builder;
+mod scratch;
+mod text_builder;
+mod text_display;
 mod text_index;
-mod textbuilder;
 
 pub use appendable::*;
-pub use formatter_builder::*;
-pub use textbuilder::*;
+pub use errors::*;
+pub use scratch::*;
+pub use text_builder::*;
+pub use text_display::*;
+pub use text_index::*;
 
 /*
 // in-library tests
