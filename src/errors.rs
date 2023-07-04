@@ -14,11 +14,23 @@
 //     MiscError(String),
 // }
 
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TextError {
     #[error("index `{0}` is out of range")]
     IndexOutOfRange(usize),
+    #[error("formatting failed")]
+    Formatting(#[from] std::fmt::Error),
+    #[error("Utf8 Encoding Error")]
+    Utf8Error(#[from] std::str::Utf8Error),
+}
+
+impl From<TextError> for std::fmt::Error {
+    fn from(text_error: TextError) -> Self {
+        match text_error {
+            TextError::Formatting(err) => err,
+            _ => std::fmt::Error::default(),
+        }
+    }
 }

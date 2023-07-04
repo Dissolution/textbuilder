@@ -1,27 +1,25 @@
 use crate::text_builder::TextBuilder;
-use crate::Appendable;
-use std::fmt::{Debug, Display, Formatter, LowerHex, UpperHex, Write};
+use crate::{Appendable, TextError};
+use anyhow::*;
+use std::fmt::{Display, Formatter, Result as FmtResult};
+use thiserror::__private::AsDynError;
 
-pub(crate) struct TextDisplay<F>(F)
+/// # TextDisplay
+pub(crate) struct TextDisplay<F>
 where
-    F: Fn(&mut TextBuilder);
-
-impl<F> TextDisplay<F>
-where
-    F: Fn(&mut TextBuilder),
+    F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
 {
-    pub fn new(f: F) -> Self {
-        TextDisplay(f)
-    }
+    pub(crate) func: F,
 }
-
 impl<F> Display for TextDisplay<F>
 where
-    F: Fn(&mut TextBuilder),
+    F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut text_builder = TextBuilder::new(f);
-        (self.0)(&mut text_builder);
-        Ok(())
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        // Create a builder now that we have a Formatter instance
+        let mut fb = TextBuilder::new(f);
+        // Run the stored func on the instance
+        (self.func)(fb)?;
+        FmtResult::Ok(())
     }
 }

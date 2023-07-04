@@ -1,5 +1,3 @@
-#![allow(dead_code, unused)]
-
 use bstr::*;
 use std::fmt::*;
 use textbuilder::*;
@@ -13,22 +11,27 @@ impl TextConsts {
 
 #[test]
 fn test_append_newline() {
-    let string = TextBuilder::build_string(|f| {
-        f.newline();
-    });
+    let string = TextBuilder::build_string(|f| f.newline());
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.as_bytes().graphemes().count(), 1);
     assert_eq!(string, "\n");
+
+    let string = TextBuilder::build_string(|mut tb| {
+        tb.config.new_line = Box::new("\r\n");
+        tb.newline()
+    });
+    assert_eq!(string.as_bytes().len(), 2);
+    assert_eq!(string.chars().count(), 2);
+    assert_eq!(string.as_bytes().graphemes().count(), 1);
+    assert_eq!(string, "\r\n");
 }
 
 // Appendable
 
 #[test]
 fn test_append_ascii_char() {
-    let string = TextBuilder::build_string(|f| {
-        f.append('J');
-    });
+    let string = TextBuilder::build_string(|f| f.append('J'));
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.as_bytes().graphemes().count(), 1);
@@ -38,9 +41,7 @@ fn test_append_ascii_char() {
 
 #[test]
 fn test_append_unicode_char() {
-    let string = TextBuilder::build_string(|f| {
-        f.append('💙');
-    });
+    let string = TextBuilder::build_string(|f| f.append('💙'));
     assert_eq!(string.as_bytes().len(), 4);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.as_bytes().graphemes().count(), 1);
@@ -50,9 +51,7 @@ fn test_append_unicode_char() {
 
 #[test]
 fn test_append_str() {
-    let string = TextBuilder::build_string(|f| {
-        f.append(TextConsts::DIGITS);
-    });
+    let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
     assert_eq!(string.as_bytes().graphemes().count(), 10);
@@ -62,9 +61,7 @@ fn test_append_str() {
 
 #[test]
 fn test_append_string() {
-    let string = TextBuilder::build_string(|f| {
-        f.append(TextConsts::DIGITS.to_string());
-    });
+    let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS.to_string()));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
     assert_eq!(string.as_bytes().graphemes().count(), 10);
@@ -91,9 +88,7 @@ impl Display for TestStruct {
 fn test_append_debug() {
     let test: TestStruct = TestStruct::default();
 
-    let string = TextBuilder::build_string(|f| {
-        f.debug(&test);
-    });
+    let string = TextBuilder::build_string(|f| f.debug(&test));
 
     assert_eq!(string, "DEBUG");
 }
@@ -102,11 +97,15 @@ fn test_append_debug() {
 fn test_append_display() {
     let test: TestStruct = TestStruct::default();
 
-    let string = TextBuilder::build_string(|f| {
-        f.display(&test);
-    });
+    let string = TextBuilder::build_string(|f| f.display(&test));
 
     assert_eq!(string, "DISPLAY");
+}
+
+#[test]
+fn test_args() {
+    let string = TextBuilder::build_string(|tb| tb.args(format_args!("{:0>8}", 147)));
+    assert_eq!(string, "00000147");
 }
 
 #[test]
@@ -114,9 +113,7 @@ fn test_enumerate() {
     let numbers = [0, 1, 2, 3, 4];
 
     let string = TextBuilder::build_string(|tb| {
-        tb.enumerate(numbers.iter(), |tb, i, item| {
-            tb.value(item, |i| i.to_string()).append('→');
-        });
+        tb.enumerate(numbers.iter(), |tb, _, item| tb.display(item)?.append('→'))
     });
     assert_eq!(string.as_bytes().len(), 20);
     assert_eq!(string.chars().count(), 10);
@@ -130,14 +127,10 @@ fn test_delimit() {
 
     let string = TextBuilder::build_string(|tb| {
         tb.delimit(
-            |tb| {
-                tb.append(',');
-            },
+            |tb| tb.append(','),
             numbers.iter(),
-            |tb, i, item| {
-                tb.value(item, |i| i.to_string());
-            },
-        );
+            |tb, _, item| tb.display(item),
+        )
     });
     assert_eq!(string.as_bytes().len(), 9);
     assert_eq!(string.chars().count(), 9);
@@ -150,9 +143,7 @@ fn test_append_delimit() {
     let numbers = [0, 1, 2, 3, 4];
 
     let string = TextBuilder::build_string(|tb| {
-        tb.append_delimit(&',', numbers.iter(), |tb, i, item| {
-            tb.value(item, |i| i.to_string());
-        });
+        tb.append_delimit(',', numbers.iter(), |tb, _, item| tb.display(item))
     });
     assert_eq!(string.as_bytes().len(), 9);
     assert_eq!(string.chars().count(), 9);
