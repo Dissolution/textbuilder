@@ -5,14 +5,12 @@ mod errors;
 mod scratch;
 mod text_builder;
 mod text_display;
-mod text_index;
 
 pub use appendable::*;
 pub use errors::*;
 pub use scratch::*;
 pub use text_builder::*;
 pub use text_display::*;
-pub use text_index::*;
 
 /*
 // in-library tests

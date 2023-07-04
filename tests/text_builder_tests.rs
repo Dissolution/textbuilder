@@ -1,6 +1,6 @@
-use bstr::*;
 use std::fmt::*;
 use textbuilder::*;
+use unicode_segmentation::*;
 
 pub struct TextConsts;
 impl TextConsts {
@@ -14,7 +14,7 @@ fn test_append_newline() {
     let string = TextBuilder::build_string(|f| f.newline());
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
-    assert_eq!(string.as_bytes().graphemes().count(), 1);
+    assert_eq!(string.graphemes(false).count(), 1);
     assert_eq!(string, "\n");
 
     let string = TextBuilder::build_string(|mut tb| {
@@ -23,7 +23,7 @@ fn test_append_newline() {
     });
     assert_eq!(string.as_bytes().len(), 2);
     assert_eq!(string.chars().count(), 2);
-    assert_eq!(string.as_bytes().graphemes().count(), 1);
+    assert_eq!(string.graphemes(false).count(), 1);
     assert_eq!(string, "\r\n");
 }
 
@@ -34,7 +34,7 @@ fn test_append_ascii_char() {
     let string = TextBuilder::build_string(|f| f.append('J'));
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
-    assert_eq!(string.as_bytes().graphemes().count(), 1);
+    assert_eq!(string.graphemes(false).count(), 1);
     assert_eq!(string, "J");
     assert_eq!(string, String::from('J'));
 }
@@ -44,7 +44,7 @@ fn test_append_unicode_char() {
     let string = TextBuilder::build_string(|f| f.append('💙'));
     assert_eq!(string.as_bytes().len(), 4);
     assert_eq!(string.chars().count(), 1);
-    assert_eq!(string.as_bytes().graphemes().count(), 1);
+    assert_eq!(string.graphemes(true).count(), 1);
     assert_eq!(string, "💙");
     assert_eq!(string, String::from('💙'));
 }
@@ -54,7 +54,7 @@ fn test_append_str() {
     let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
-    assert_eq!(string.as_bytes().graphemes().count(), 10);
+    assert_eq!(string.graphemes(false).count(), 10);
     assert_eq!(string, "0123456789");
     assert_eq!(string, TextConsts::DIGITS);
 }
@@ -64,7 +64,7 @@ fn test_append_string() {
     let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS.to_string()));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
-    assert_eq!(string.as_bytes().graphemes().count(), 10);
+    assert_eq!(string.graphemes(false).count(), 10);
     assert_eq!(string, "0123456789");
     assert_eq!(string, TextConsts::DIGITS);
 }
@@ -117,7 +117,7 @@ fn test_enumerate() {
     });
     assert_eq!(string.as_bytes().len(), 20);
     assert_eq!(string.chars().count(), 10);
-    assert_eq!(string.as_bytes().graphemes().count(), 10);
+    assert_eq!(string.graphemes(true).count(), 10);
     assert_eq!(string, "0→1→2→3→4→");
 }
 
@@ -134,7 +134,7 @@ fn test_delimit() {
     });
     assert_eq!(string.as_bytes().len(), 9);
     assert_eq!(string.chars().count(), 9);
-    assert_eq!(string.as_bytes().graphemes().count(), 9);
+    assert_eq!(string.graphemes(false).count(), 9);
     assert_eq!(string, "0,1,2,3,4");
 }
 
@@ -147,7 +147,7 @@ fn test_append_delimit() {
     });
     assert_eq!(string.as_bytes().len(), 9);
     assert_eq!(string.chars().count(), 9);
-    assert_eq!(string.as_bytes().graphemes().count(), 9);
+    assert_eq!(string.graphemes(false).count(), 9);
     assert_eq!(string, "0,1,2,3,4");
 }
 

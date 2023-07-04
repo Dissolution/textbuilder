@@ -1,11 +1,18 @@
 [package]
 name = "textbuilder"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version = "0.2.0"
+authors = ["Timothy Jay <Dissolution@gmail.com>"]
+edition = '2021'
+description = "A fluent text builder"
+readme = "README.md"
+repository = "https://github.com/Dissolution/textbuilder"
+license = "GPL-3.0-or-later"
+keywords = ["text"]
 
 [dependencies]
+# Custom error helper
 thiserror = "1.0.40"
+# Fast error helper
 anyhow = "1.0.71"
-bstr = "1.5.0"
+# Assists with testing (mostly Grapheme counting)
+unicode-segmentation = "1.10.1"
