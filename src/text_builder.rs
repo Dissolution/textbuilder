@@ -1,31 +1,8 @@
-use crate::text_display::TextDisplay;
+use crate::text_builder_config::TextBuilderConfig;
+use crate::text_display::TextBuilderDisplay;
 use crate::{Appendable, TextError};
-use std::fmt::{Arguments, Debug, Display, Formatter, LowerHex, UpperHex, Write};
-
-pub struct TextBuilderConfig {
-    pub new_line: Box<dyn Appendable>,
-    pub indent: Box<dyn Appendable>,
-}
-impl TextBuilderConfig {
-    pub fn new<N, I>(new_line: I, indent: I) -> Self
-    where
-        N: Appendable + 'static,
-        I: Appendable + 'static,
-    {
-        Self {
-            new_line: Box::new(new_line),
-            indent: Box::new(indent),
-        }
-    }
-}
-impl Default for TextBuilderConfig {
-    fn default() -> Self {
-        Self {
-            new_line: Box::new('\n'),
-            indent: Box::new("    "), // 4 spaces
-        }
-    }
-}
+use anyhow::anyhow;
+use std::fmt::{Arguments, Debug, Display, Formatter, LowerHex, UpperHex};
 
 /// # `TextBuilder`
 /// A wrapper around `std::fmt::Formatter` that provides fluent operations.
@@ -58,41 +35,44 @@ impl TextBuilder<'_, '_> {
     where
         F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
     {
-        let text_display = TextDisplay { func };
+        let text_display = TextBuilderDisplay { func };
         format!("{}", text_display)
     }
 
-    pub fn newline(mut self) -> Result<Self, TextError> {
-        self.config.new_line.write_to(self.formatter)?;
+    pub fn newline(self) -> Result<Self, TextError> {
+        self.config.newline.write_to(self.formatter)?;
+        for indent in self.config.indents.iter() {
+            indent.write_to(self.formatter)?;
+        }
         Ok(self)
     }
 
-    pub fn append<A: Appendable>(mut self, value: A) -> Result<Self, TextError> {
+    pub fn append<A: Appendable>(self, value: A) -> Result<Self, TextError> {
         value.write_to(self.formatter)?;
         Ok(self)
     }
 
-    pub fn debug<D: Debug>(mut self, value: &D) -> Result<Self, TextError> {
+    pub fn debug<D: Debug>(self, value: &D) -> Result<Self, TextError> {
         Debug::fmt(value, self.formatter)?;
         Ok(self)
     }
 
-    pub fn display<D: Display>(mut self, value: &D) -> Result<Self, TextError> {
+    pub fn display<D: Display>(self, value: &D) -> Result<Self, TextError> {
         Display::fmt(value, self.formatter)?;
         Ok(self)
     }
 
-    pub fn lower_hex<H: LowerHex>(mut self, value: &H) -> Result<Self, TextError> {
+    pub fn lower_hex<H: LowerHex>(self, value: &H) -> Result<Self, TextError> {
         LowerHex::fmt(value, self.formatter)?;
         Ok(self)
     }
 
-    pub fn upper_hex<H: UpperHex>(mut self, value: &H) -> Result<Self, TextError> {
+    pub fn upper_hex<H: UpperHex>(self, value: &H) -> Result<Self, TextError> {
         UpperHex::fmt(value, self.formatter)?;
         Ok(self)
     }
 
-    pub fn utf8_bytes<R: AsRef<[u8]>>(mut self, value: R) -> Result<Self, TextError> {
+    pub fn utf8_bytes<R: AsRef<[u8]>>(self, value: R) -> Result<Self, TextError> {
         let bytes = value.as_ref();
         let str = std::str::from_utf8(bytes)?;
         self.formatter.write_str(str)?;
@@ -100,7 +80,7 @@ impl TextBuilder<'_, '_> {
     }
 
     pub fn value<V, A: Appendable>(
-        mut self,
+        self,
         value: &V,
         transform: fn(&V) -> A,
     ) -> Result<Self, TextError> {
@@ -108,7 +88,7 @@ impl TextBuilder<'_, '_> {
         self.append(appendable)
     }
 
-    pub fn args(mut self, args: Arguments<'_>) -> Result<Self, TextError> {
+    pub fn args(self, args: Arguments<'_>) -> Result<Self, TextError> {
         self.formatter.write_fmt(args)?;
         Ok(self)
     }
@@ -168,6 +148,22 @@ impl TextBuilder<'_, '_> {
             }
             self = (per_item)(self, i, item)?;
         }
+        Ok(self)
+    }
+
+    pub fn indented<I, F>(mut self, indent: I, indented_build: F) -> Result<Self, TextError>
+    where
+        I: Appendable + 'static,
+        F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
+    {
+        // push a new indent
+        self.config.indents.push(Box::new(indent));
+        self = indented_build(self)?;
+        // pop it off
+        self.config
+            .indents
+            .pop()
+            .ok_or(anyhow!("Could not pop indent"))?;
         Ok(self)
     }
 }

@@ -18,7 +18,7 @@ fn test_append_newline() {
     assert_eq!(string, "\n");
 
     let string = TextBuilder::build_string(|mut tb| {
-        tb.config.new_line = Box::new("\r\n");
+        tb.config.newline = Box::new("\r\n");
         tb.newline()
     });
     assert_eq!(string.as_bytes().len(), 2);
@@ -149,6 +149,22 @@ fn test_append_delimit() {
     assert_eq!(string.chars().count(), 9);
     assert_eq!(string.graphemes(false).count(), 9);
     assert_eq!(string, "0,1,2,3,4");
+}
+
+#[test]
+fn test_indent() {
+    let string = TextBuilder::build_string(|tb| {
+        tb.append("123")?
+            .indented("    ", |tb| tb.newline()?.append("abc"))?
+            .newline()?
+            .append("TUV")
+    });
+    assert_eq!(
+        string,
+        r#"123
+    abc
+TUV"#
+    );
 }
 
 /*

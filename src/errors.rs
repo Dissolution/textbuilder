@@ -9,6 +9,8 @@ pub enum TextError {
     Formatting(#[from] std::fmt::Error),
     #[error("Utf8 error: {0}")]
     Utf8Error(#[from] std::str::Utf8Error),
+    #[error("Error: {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 /// Convert a `TextError` to a `std::fmt::Error`

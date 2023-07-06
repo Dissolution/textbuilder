@@ -1,16 +1,15 @@
-#![allow(unused)]
+#![allow(dead_code)] // As a library... ;-)
 
 mod appendable;
 mod errors;
-mod scratch;
 mod text_builder;
 mod text_display;
+mod text_builder_config;
+mod scratch;
 
 pub use appendable::*;
 pub use errors::*;
-pub use scratch::*;
 pub use text_builder::*;
-pub use text_display::*;
 
 /*
 // in-library tests
