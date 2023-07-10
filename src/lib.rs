@@ -1,14 +1,13 @@
 #![allow(dead_code)] // As a library... ;-)
 
-mod appendable;
 mod errors;
+mod formatter_builder;
+mod string_builder;
 mod text_builder;
-mod text_display;
-mod text_builder_config;
-mod scratch;
 
-pub use appendable::*;
 pub use errors::*;
+pub use formatter_builder::*;
+pub use string_builder::*;
 pub use text_builder::*;
 
 /*

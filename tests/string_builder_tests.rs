@@ -11,14 +11,14 @@ impl TextConsts {
 
 #[test]
 fn test_append_newline() {
-    let string = TextBuilder::build_string(|f| f.newline());
+    let string = StringBuilder::build_string(|f| f.newline());
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.graphemes(false).count(), 1);
     assert_eq!(string, "\n");
 
-    let string = TextBuilder::build_string(|mut tb| {
-        tb.config.newline = Box::new("\r\n");
+    let string = StringBuilder::build_string(|mut tb| {
+        tb.newline = Box::from("\r\n");
         tb.newline()
     });
     assert_eq!(string.as_bytes().len(), 2);
@@ -31,7 +31,7 @@ fn test_append_newline() {
 
 #[test]
 fn test_append_ascii_char() {
-    let string = TextBuilder::build_string(|f| f.append('J'));
+    let string = StringBuilder::build_string(|f| f.char('J'));
     assert_eq!(string.as_bytes().len(), 1);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.graphemes(false).count(), 1);
@@ -41,7 +41,7 @@ fn test_append_ascii_char() {
 
 #[test]
 fn test_append_unicode_char() {
-    let string = TextBuilder::build_string(|f| f.append('💙'));
+    let string = StringBuilder::build_string(|f| f.char('💙'));
     assert_eq!(string.as_bytes().len(), 4);
     assert_eq!(string.chars().count(), 1);
     assert_eq!(string.graphemes(true).count(), 1);
@@ -51,7 +51,7 @@ fn test_append_unicode_char() {
 
 #[test]
 fn test_append_str() {
-    let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS));
+    let string = StringBuilder::build_string(|f| f.str(TextConsts::DIGITS));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
     assert_eq!(string.graphemes(false).count(), 10);
@@ -61,7 +61,7 @@ fn test_append_str() {
 
 #[test]
 fn test_append_string() {
-    let string = TextBuilder::build_string(|f| f.append(TextConsts::DIGITS.to_string()));
+    let string = StringBuilder::build_string(|f| f.str(&TextConsts::DIGITS.to_string()));
     assert_eq!(string.as_bytes().len(), 10);
     assert_eq!(string.chars().count(), 10);
     assert_eq!(string.graphemes(false).count(), 10);
@@ -88,7 +88,7 @@ impl Display for TestStruct {
 fn test_append_debug() {
     let test: TestStruct = TestStruct::default();
 
-    let string = TextBuilder::build_string(|f| f.debug(&test));
+    let string = StringBuilder::build_string(|f| f.debug(&test));
 
     assert_eq!(string, "DEBUG");
 }
@@ -97,14 +97,14 @@ fn test_append_debug() {
 fn test_append_display() {
     let test: TestStruct = TestStruct::default();
 
-    let string = TextBuilder::build_string(|f| f.display(&test));
+    let string = StringBuilder::build_string(|f| f.display(&test));
 
     assert_eq!(string, "DISPLAY");
 }
 
 #[test]
 fn test_args() {
-    let string = TextBuilder::build_string(|tb| tb.args(format_args!("{:0>8}", 147)));
+    let string = StringBuilder::build_string(|tb| tb.args(format_args!("{:0>8}", 147)));
     assert_eq!(string, "00000147");
 }
 
@@ -112,8 +112,8 @@ fn test_args() {
 fn test_enumerate() {
     let numbers = [0, 1, 2, 3, 4];
 
-    let string = TextBuilder::build_string(|tb| {
-        tb.enumerate(numbers.iter(), |tb, _, item| tb.display(item)?.append('→'))
+    let string = StringBuilder::build_string(|tb| {
+        tb.enumerate(numbers.iter(), |tb, _, item| tb.display(item)?.char('→'))
     });
     assert_eq!(string.as_bytes().len(), 20);
     assert_eq!(string.chars().count(), 10);
@@ -125,9 +125,9 @@ fn test_enumerate() {
 fn test_delimit() {
     let numbers = [0, 1, 2, 3, 4];
 
-    let string = TextBuilder::build_string(|tb| {
+    let string = StringBuilder::build_string(|tb| {
         tb.delimit(
-            |tb| tb.append(','),
+            |tb| tb.char(','),
             numbers.iter(),
             |tb, _, item| tb.display(item),
         )
@@ -138,26 +138,26 @@ fn test_delimit() {
     assert_eq!(string, "0,1,2,3,4");
 }
 
-#[test]
-fn test_append_delimit() {
-    let numbers = [0, 1, 2, 3, 4];
-
-    let string = TextBuilder::build_string(|tb| {
-        tb.append_delimit(',', numbers.iter(), |tb, _, item| tb.display(item))
-    });
-    assert_eq!(string.as_bytes().len(), 9);
-    assert_eq!(string.chars().count(), 9);
-    assert_eq!(string.graphemes(false).count(), 9);
-    assert_eq!(string, "0,1,2,3,4");
-}
+// #[test]
+// fn test_append_delimit() {
+//     let numbers = [0, 1, 2, 3, 4];
+//
+//     let string = StringBuilder::build_string(|tb| {
+//         tb.append_delimit(',', numbers.iter(), |tb, _, item| tb.display(item))
+//     });
+//     assert_eq!(string.as_bytes().len(), 9);
+//     assert_eq!(string.chars().count(), 9);
+//     assert_eq!(string.graphemes(false).count(), 9);
+//     assert_eq!(string, "0,1,2,3,4");
+// }
 
 #[test]
 fn test_indent() {
-    let string = TextBuilder::build_string(|tb| {
-        tb.append("123")?
-            .indented("    ", |tb| tb.newline()?.append("abc"))?
+    let string = StringBuilder::build_string(|tb| {
+        tb.str("123")?
+            .indented("    ", |tb| tb.newline()?.str("abc"))?
             .newline()?
-            .append("TUV")
+            .str("TUV")
     });
     assert_eq!(
         string,
@@ -176,7 +176,7 @@ TUV"#
 
 #[test]
 fn test_append_value() {
-    let mut tb = TextBuilder::new();
+    let mut tb = StringBuilder::new();
     let value = NonDisplayPoint::default();
     tb.append_value(&value, |pt| format!("({},{})", pt.x, pt.y));
 
@@ -190,34 +190,34 @@ fn test_append_value() {
 
 #[test]
 fn test_enumerate_append() {
-    let mut textbuilder = TextBuilder::default();
+    let mut StringBuilder = StringBuilder::default();
     let numbers = [0, 1, 2, 3, 4];
-    textbuilder.enumerate_append(numbers.iter());
-    assert_eq!(textbuilder.len_bytes(), 5);
-    assert_eq!(textbuilder.to_string(), "01234")
+    StringBuilder.enumerate_append(numbers.iter());
+    assert_eq!(StringBuilder.len_bytes(), 5);
+    assert_eq!(StringBuilder.to_string(), "01234")
 }
 
 
 
 #[test]
 fn test_append_delimit() {
-    let mut textbuilder = TextBuilder::default();
+    let mut StringBuilder = StringBuilder::default();
     let numbers = [0, 1, 2, 3, 4];
-    textbuilder.append_delimit(',', numbers.iter(), |tb, i, item| {
+    StringBuilder.append_delimit(',', numbers.iter(), |tb, i, item| {
         tb.append(i.to_string())
             .append(':')
             .append(item.to_string());
     });
-    assert!(textbuilder.len_bytes() > 5);
-    assert_eq!(textbuilder.to_string(), "0:0,1:1,2:2,3:3,4:4")
+    assert!(StringBuilder.len_bytes() > 5);
+    assert_eq!(StringBuilder.to_string(), "0:0,1:1,2:2,3:3,4:4")
 }
 
 #[test]
 fn test_append_delimit_append() {
-    let mut textbuilder = TextBuilder::default();
+    let mut StringBuilder = StringBuilder::default();
     let numbers = [0, 1, 2, 3, 4];
-    textbuilder.append_delimit_append(',', numbers.iter());
-    assert_eq!(textbuilder.len_bytes(), 9);
-    assert_eq!(textbuilder.to_string(), "0,1,2,3,4")
+    StringBuilder.append_delimit_append(',', numbers.iter());
+    assert_eq!(StringBuilder.len_bytes(), 9);
+    assert_eq!(StringBuilder.to_string(), "0,1,2,3,4")
 }
 */

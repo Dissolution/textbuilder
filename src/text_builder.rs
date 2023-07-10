@@ -1,169 +1,79 @@
-use crate::text_builder_config::TextBuilderConfig;
-use crate::text_display::TextBuilderDisplay;
-use crate::{Appendable, TextError};
-use anyhow::anyhow;
-use std::fmt::{Arguments, Debug, Display, Formatter, LowerHex, UpperHex};
+use crate::TextError;
+use std::fmt::{Arguments, Debug, Display};
 
-/// # `TextBuilder`
-/// A wrapper around `std::fmt::Formatter` that provides fluent operations.
-/// `'b` - the lifetime of the `TextBuilder`  
-/// `'f` - the lifetime of the `Formatter`
-/// The lifetime of the `Formatter` _must_ outlive the lifetime of the `TextBuilder`
-pub struct TextBuilder<'b, 'f>
-where
-    'f: 'b,
-{
-    /// The wrapped `Formatter`
-    formatter: &'b mut Formatter<'f>,
-    pub config: TextBuilderConfig,
-}
-
-impl<'b, 'f> TextBuilder<'b, 'f>
-where
-    'f: 'b,
-{
-    /// Create a new `TextBuilder` that wraps a `Formatter`
-    pub fn new(formatter: &'b mut Formatter<'f>) -> Self {
-        TextBuilder {
-            formatter,
-            config: TextBuilderConfig::default(),
-        }
-    }
-}
-impl TextBuilder<'_, '_> {
-    pub fn build_string<F>(func: F) -> String
+/// # A fluent Builder of Text
+/// This trait species that its implementer can fluently perform textual operations
+/// that build up a `String`
+pub trait TextBuilder {
+    /// Appends the current newline (and any indents) to this `TextBuilder`
+    fn newline(self) -> Result<Self, TextError>
     where
-        F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
-    {
-        let text_display = TextBuilderDisplay { func };
-        format!("{}", text_display)
-    }
+        Self: Sized;
 
-    pub fn newline(self) -> Result<Self, TextError> {
-        self.config.newline.write_to(self.formatter)?;
-        for indent in self.config.indents.iter() {
-            indent.write_to(self.formatter)?;
-        }
-        Ok(self)
-    }
-
-    pub fn append<A: Appendable>(self, value: A) -> Result<Self, TextError> {
-        value.write_to(self.formatter)?;
-        Ok(self)
-    }
-
-    pub fn debug<D: Debug>(self, value: &D) -> Result<Self, TextError> {
-        Debug::fmt(value, self.formatter)?;
-        Ok(self)
-    }
-
-    pub fn display<D: Display>(self, value: &D) -> Result<Self, TextError> {
-        Display::fmt(value, self.formatter)?;
-        Ok(self)
-    }
-
-    pub fn lower_hex<H: LowerHex>(self, value: &H) -> Result<Self, TextError> {
-        LowerHex::fmt(value, self.formatter)?;
-        Ok(self)
-    }
-
-    pub fn upper_hex<H: UpperHex>(self, value: &H) -> Result<Self, TextError> {
-        UpperHex::fmt(value, self.formatter)?;
-        Ok(self)
-    }
-
-    pub fn utf8_bytes<R: AsRef<[u8]>>(self, value: R) -> Result<Self, TextError> {
-        let bytes = value.as_ref();
-        let str = std::str::from_utf8(bytes)?;
-        self.formatter.write_str(str)?;
-        Ok(self)
-    }
-
-    pub fn value<V, A: Appendable>(
-        self,
-        value: &V,
-        transform: fn(&V) -> A,
-    ) -> Result<Self, TextError> {
-        let appendable = (transform)(value);
-        self.append(appendable)
-    }
-
-    pub fn args(self, args: Arguments<'_>) -> Result<Self, TextError> {
-        self.formatter.write_fmt(args)?;
-        Ok(self)
-    }
-
-    pub fn enumerate<I, F>(mut self, iter: I, per_item: F) -> Result<Self, TextError>
+    /// Appends a `&str` to this `TextBuilder`
+    fn str(self, str: &str) -> Result<Self, TextError>
     where
+        Self: Sized;
+
+    /// Appends a `char` to this `TextBuilder`
+    fn char(self, ch: char) -> Result<Self, TextError>
+    where
+        Self: Sized;
+
+    /// Appends a `value` that implements `Debug`
+    fn debug<D>(self, value: &D) -> Result<Self, TextError>
+    where
+        Self: Sized,
+        D: Debug;
+    /// Appends a `value` that implements `Display`
+    fn display<D>(self, value: &D) -> Result<Self, TextError>
+    where
+        Self: Sized,
+        D: Display;
+
+    /// Appends an argument formatting result  
+    /// Note: Use the `format_args!()` macro to generate `Arguments`
+    fn args(self, args: Arguments<'_>) -> Result<Self, TextError>
+    where
+        Self: Sized;
+
+    /// # Enumerate
+    /// Enumerate is a powerful function that iterates over `iter`, performing a `Fn` for each item
+    /// that uses the `TextBuilder`, the current iteration `index`, and the `item` to perform some
+    /// sort of action (generally appending the value in some way)
+    fn enumerate<I, B>(mut self, iter: I, build_item: B) -> Result<Self, TextError>
+    where
+        Self: Sized,
         I: Iterator,
-        F: for<'b, 'f> Fn(
-            TextBuilder<'b, 'f>,
-            usize,
-            I::Item,
-        ) -> Result<TextBuilder<'b, 'f>, TextError>,
+        B: Fn(Self, usize, I::Item) -> Result<Self, TextError>,
     {
         for (i, item) in iter.enumerate() {
-            self = (per_item)(self, i, item)?;
+            self = (build_item)(self, i, item)?;
         }
         Ok(self)
     }
 
-    pub fn delimit<D, I, F>(mut self, delimit: D, iter: I, per_item: F) -> Result<Self, TextError>
+    /// # Delimit
+    /// Delimit is a powerful function that combines `Enumerate` with a `delimit` function that can
+    /// add a delimiter between values
+    fn delimit<D, I, B>(mut self, delimit: D, iter: I, build_item: B) -> Result<Self, TextError>
     where
-        D: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
+        Self: Sized,
+        D: Fn(Self) -> Result<Self, TextError>,
         I: Iterator,
-        F: for<'b, 'f> Fn(
-            TextBuilder<'b, 'f>,
-            usize,
-            I::Item,
-        ) -> Result<TextBuilder<'b, 'f>, TextError>,
+        B: Fn(Self, usize, I::Item) -> Result<Self, TextError>,
     {
         for (i, item) in iter.enumerate() {
             if i > 0 {
                 self = (delimit)(self)?;
             }
-            self = (per_item)(self, i, item)?;
+            self = (build_item)(self, i, item)?;
         }
         Ok(self)
     }
 
-    pub fn append_delimit<D, I, F>(
-        mut self,
-        delimiter: D,
-        iter: I,
-        per_item: F,
-    ) -> Result<Self, TextError>
+    fn indented<B>(self, indent: &str, indented_build: B) -> Result<Self, TextError>
     where
-        D: Appendable,
-        I: Iterator,
-        F: for<'b, 'f> Fn(
-            TextBuilder<'b, 'f>,
-            usize,
-            I::Item,
-        ) -> Result<TextBuilder<'b, 'f>, TextError>,
-    {
-        for (i, item) in iter.enumerate() {
-            if i > 0 {
-                delimiter.write_to(self.formatter)?;
-            }
-            self = (per_item)(self, i, item)?;
-        }
-        Ok(self)
-    }
-
-    pub fn indented<I, F>(mut self, indent: I, indented_build: F) -> Result<Self, TextError>
-    where
-        I: Appendable + 'static,
-        F: for<'b, 'f> Fn(TextBuilder<'b, 'f>) -> Result<TextBuilder<'b, 'f>, TextError>,
-    {
-        // push a new indent
-        self.config.indents.push(Box::new(indent));
-        self = indented_build(self)?;
-        // pop it off
-        self.config
-            .indents
-            .pop()
-            .ok_or(anyhow!("Could not pop indent"))?;
-        Ok(self)
-    }
+        Self: Sized,
+        B: Fn(Self) -> Result<Self, TextError>;
 }
